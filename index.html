@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Arabic AI Prompt Toolkit</title>
+<style>
+:root{color-scheme:light dark;--bg:#0b1322;--panel:#152237;--text:#eef4ff;--muted:#b3c1d5;--accent:#60e0cb;--line:#3c4d64}*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:16px/1.7 system-ui,sans-serif}main{max-width:850px;margin:auto;padding:24px}h1{font-size:clamp(1.7rem,5vw,2.5rem);line-height:1.3;margin:14px 0}p{color:var(--muted)}.panel{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:20px;margin:20px 0}.grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}label{display:block;font-weight:600;margin:12px 0 6px}input,textarea,select{display:block;width:100%;padding:12px;border:1px solid var(--line);border-radius:10px;background:var(--bg);color:var(--text);font:inherit}textarea{resize:vertical;min-height:90px}button{font:inherit;font-weight:700;padding:10px 18px;border-radius:10px;border:1px solid var(--line);background:var(--panel);color:var(--text);cursor:pointer}button.primary{background:var(--accent);color:#09231e;border-color:transparent}button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-visible{outline:2px solid var(--accent);outline-offset:3px}.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:16px}#output{min-height:220px;white-space:pre-wrap}#status{min-height:28px;margin:8px 0 0}small{color:var(--muted)}a{color:var(--accent)}@media(max-width:560px){.grid{grid-template-columns:1fr}main{padding:14px}.panel{padding:14px}}
+</style>
+</head>
+<body><main>
+<button id="toggle" type="button">English</button>
+<h1>Arabic AI Prompt Toolkit</h1>
+<p id="intro">أداة مفتوحة المصدر لبناء برومبتات منظمة. تعمل محليًا دون حساب أو مفتاح API.</p>
+<form id="form" class="panel">
+<div class="grid"><div><label for="category" id="categoryLabel">مجال الاستخدام</label><select id="category"></select></div><div><label for="language" id="languageLabel">لغة قالب البرومبت</label><select id="language"><option value="ar">العربية</option><option value="en">English</option></select></div></div>
+<label for="goal" id="goalLabel">المطلوب *</label><textarea id="goal" required maxlength="5000" dir="auto"></textarea>
+<label for="context" id="contextLabel">السياق والمراجع</label><textarea id="context" maxlength="5000" dir="auto"></textarea>
+<label for="constraints" id="constraintsLabel">القيود والشروط</label><textarea id="constraints" maxlength="5000" dir="auto"></textarea>
+<label for="format" id="formatLabel">صيغة المخرجات</label><input id="format" maxlength="500" dir="auto">
+<div class="actions"><button class="primary" type="submit" id="generate">إنشاء البرومبت</button><button type="reset" id="reset">مسح</button></div>
+</form>
+<section class="panel"><label for="output" id="outputLabel">البرومبت الناتج (قابل للتعديل)</label><textarea id="output" dir="auto" spellcheck="false"></textarea><div class="actions"><button type="button" id="copy">نسخ</button><button type="button" id="save">حفظ TXT</button></div><p id="status" role="status" aria-live="polite"></p></section>
+<small id="note">الإصدار 0.1 — قوالب محلية، لا تستخدم نموذج ذكاء اصطناعي ولا تترجم النص المدخل تلقائيًا.</small>
+</main><script>
+'use strict';
+const $=id=>document.getElementById(id);
+const templates={
+ design:{ar:['التصميم','مصمم بصري محترف','راعِ التسلسل البصري والتباين والاتساق مع الهوية.'],en:['Design','Professional visual designer','Prioritize visual hierarchy, contrast, and brand consistency.']},
+ restoration:{ar:['ترميم الصور','مختص بالترميم الفوتوغرافي','حافظ على الملامح والتكوين الأصليين، ولا تختلق تفاصيل غير مؤكدة.'],en:['Photo restoration','Photo restoration specialist','Preserve identity and composition; avoid inventing uncertain details.']},
+ video:{ar:['إنتاج الفيديو','مخرج ومصمم مشاهد','حدد حركة الكاميرا والإضاءة والإيقاع، وحافظ على اتساق المشاهد.'],en:['Video production','Film director and storyboard artist','Specify camera motion, lighting, pacing, and visual continuity.']},
+ research:{ar:['البحث العلمي','باحث علمي','ميّز الحقائق عن الافتراضات، ولا تختلق مراجع أو بيانات.'],en:['Research','Scientific researcher','Separate evidence from assumptions; never invent citations or data.']},
+ code:{ar:['البرمجة','مهندس برمجيات','راعِ الأمان وقابلية الصيانة وأضف اختبارات مناسبة.'],en:['Programming','Software engineer','Prioritize security, maintainability, and appropriate tests.']},
+ general:{ar:['استخدام عام','مساعد متخصص','التزم بالمطلوب، واذكر الافتراضات والمعلومات غير المؤكدة.'],en:['General','Specialist assistant','Follow the request and disclose assumptions and uncertainties.']}
+};
+const ui={ar:{intro:'أداة مفتوحة المصدر لبناء برومبتات منظمة. تعمل محليًا دون حساب أو مفتاح API.',categoryLabel:'مجال الاستخدام',languageLabel:'لغة قالب البرومبت',goalLabel:'المطلوب *',contextLabel:'السياق والمراجع',constraintsLabel:'القيود والشروط',formatLabel:'صيغة المخرجات',generate:'إنشاء البرومبت',reset:'مسح',outputLabel:'البرومبت الناتج (قابل للتعديل)',copy:'نسخ',save:'حفظ TXT',note:'الإصدار 0.1 — قوالب محلية، لا تستخدم نموذج ذكاء اصطناعي ولا تترجم النص المدخل تلقائيًا.',empty:'أنشئ البرومبت أولًا.',copied:'تم النسخ.',copyFail:'تعذر النسخ تلقائيًا؛ حدد النص وانسخه يدويًا.',saved:'تم إنشاء الملف.',goalError:'أدخل المطلوب أولًا.'},en:{intro:'An open-source structured prompt builder. Runs locally without an account or API key.',categoryLabel:'Use case',languageLabel:'Prompt template language',goalLabel:'Task *',contextLabel:'Context and references',constraintsLabel:'Constraints',formatLabel:'Output format',generate:'Build prompt',reset:'Clear',outputLabel:'Generated prompt (editable)',copy:'Copy',save:'Save TXT',note:'Version 0.1 — Local templates only; no AI model or automatic translation of your input.',empty:'Build a prompt first.',copied:'Copied.',copyFail:'Automatic copying failed; select and copy the text manually.',saved:'File created.',goalError:'Enter a task first.'}};
+let locale='ar';
+function render(){const old=$('category').value;document.documentElement.lang=locale;document.documentElement.dir=locale==='ar'?'rtl':'ltr';$('toggle').textContent=locale==='ar'?'English':'العربية';for(const [id,label] of Object.entries(ui[locale])){const el=$(id);if(el)el.textContent=label;} $('category').replaceChildren();for(const [key,t] of Object.entries(templates)){const option=document.createElement('option');option.value=key;option.textContent=t[locale][0];$('category').append(option);}if(old)$('category').value=old;}
+function buildPrompt(lang,category,goal,context,constraints,format){const t=templates[category][lang];const ar=lang==='ar';const parts=[(ar?'الدور: ':'Role: ')+t[1],(ar?'المهمة: ':'Task: ')+goal.trim(),context.trim()?(ar?'السياق والمراجع: ':'Context and references: ')+context.trim():'',(ar?'التوجيهات: ':'Guidelines: ')+t[2],constraints.trim()?(ar?'القيود الإلزامية: ':'Mandatory constraints: ')+constraints.trim():'',format.trim()?(ar?'صيغة المخرجات: ':'Output format: ')+format.trim():''];return parts.filter(Boolean).join('\n\n');}
+$('toggle').addEventListener('click',()=>{locale=locale==='ar'?'en':'ar';render();$('status').textContent='';});
+$('form').addEventListener('submit',e=>{e.preventDefault();if(!$('goal').value.trim()){$('status').textContent=ui[locale].goalError;$('goal').focus();return;}$('output').value=buildPrompt($('language').value,$('category').value,$('goal').value,$('context').value,$('constraints').value,$('format').value);$('status').textContent='';});
+$('form').addEventListener('reset',()=>{$('output').value='';$('status').textContent='';});
+$('copy').addEventListener('click',async()=>{const v=$('output').value;if(!v.trim()){$('status').textContent=ui[locale].empty;return;}try{await navigator.clipboard.writeText(v);$('status').textContent=ui[locale].copied;}catch{$('output').focus();$('output').select();$('status').textContent=ui[locale].copyFail;}});
+$('save').addEventListener('click',()=>{const v=$('output').value;if(!v.trim()){$('status').textContent=ui[locale].empty;return;}const url=URL.createObjectURL(new Blob([v],{type:'text/plain;charset=utf-8'}));const a=document.createElement('a');a.href=url;a.download='prompt.txt';document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);$('status').textContent=ui[locale].saved;});
+render();
+</script></body></html>
